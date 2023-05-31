@@ -9,7 +9,7 @@ function printSbtTask(task: string, cwd?: string): Promise<string> {
     stdio: ['ignore', 'pipe', 'inherit'],
   };
   const child = process.platform === 'win32'
-    ? spawn("sbt.bat", args.map(x => `"${x}"`), {shell: true, ...options})
+    ? spawn("sbt.bat", args.map(x => `"${x}"`), { shell: true, ...options })
     : spawn("sbt", args, options);
 
   let fullOutput: string = '';
@@ -54,17 +54,19 @@ export default function scalaJSPlugin(options: ScalaJSPluginOptions = {}): ViteP
     configResolved(resolvedConfig) {
       isDev = resolvedConfig.mode === 'development';
     },
-
     // standard Rollup
-    async buildStart(options) {
-      if (isDev === undefined)
-        throw new Error("configResolved must be called before buildStart");
-
-      const task = isDev ? "fastLinkJSOutput" : "fullLinkJSOutput";
-      const projectTask = projectID ? `${projectID}/${task}` : task;
-      scalaJSOutputDir = await printSbtTask(projectTask, cwd);
+    buildStart: {
+      sequential: true,
+      order: 'pre',
+      async handler(options) {
+        if (isDev === undefined)
+          throw new Error("configResolved must be called before buildStart");
+  
+        const task = isDev ? "fastLinkJSOutput" : "fullLinkJSOutput";
+        const projectTask = projectID ? `${projectID}/${task}` : task;
+        scalaJSOutputDir = await printSbtTask(projectTask, cwd);
+      },
     },
-
     // standard Rollup
     resolveId(source, importer, options) {
       if (scalaJSOutputDir === undefined)
